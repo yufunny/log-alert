@@ -1,0 +1,6 @@
+main
+log-alert
+*.exe
+config.yaml
+.idea
+*.log
