@@ -1,27 +1,27 @@
 package watcher
 
 import (
-	"github.com/papertrail/go-tail/follower"
-	"io"
-	"regexp"
 	"fmt"
-	"os"
-	"github.com/yufunny/log-alert/notify"
-	"time"
+	"github.com/papertrail/go-tail/follower"
 	"github.com/sirupsen/logrus"
+	"github.com/yufunny/log-alert/notify"
+	"io"
+	"os"
+	"regexp"
+	"time"
 )
 
 type Watcher struct {
-	File string
-	Rule string
-	Desc string
+	File     string
+	Rule     string
+	Desc     string
 	Duration time.Duration
-	Times int
+	Times    int
 	Interval time.Duration
 	Notifier notify.Notify
-	Count int
-	Sent bool
-	Text []string
+	Count    int
+	Sent     bool
+	Text     []string
 }
 
 func (w *Watcher) Watch() {
@@ -53,8 +53,8 @@ func (w *Watcher) Watch() {
 	}
 }
 
-func (w *Watcher) tick ()  {
-	if w.Duration.Nanoseconds() > 0  {
+func (w *Watcher) tick() {
+	if w.Duration.Nanoseconds() > 0 {
 		countTicker := time.NewTicker(w.Duration)
 		go func() {
 			for {

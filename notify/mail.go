@@ -1,17 +1,17 @@
 package notify
 
 import (
+	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
-	"fmt"
 )
 
 type MailNotify struct {
-	Url string
+	Url       string
 	Receivers []string
 }
 
-func (x *MailNotify) Send(desc string, content ...string)  {
+func (x *MailNotify) Send(desc string, content ...string) {
 	var address, password, smtp string
 	var port int
 	fmt.Sscanf(x.Url, "%s | %s | %s | %d", &address, &password, &smtp, &port)

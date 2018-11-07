@@ -8,24 +8,23 @@ import (
 
 type WatchRule struct {
 	File     string `yaml:"file"`
-	Rule string `yaml:"rule"`
-	Desc string `yaml:"desc"`
+	Rule     string `yaml:"rule"`
+	Desc     string `yaml:"desc"`
 	Duration string `yaml:"duration"`
-	Times int `yaml:"times"`
+	Times    int    `yaml:"times"`
 	Interval string `yaml:"interval"`
 }
 
 type NotifyConfig struct {
 	Driver string `yaml:"driver"`
-	Url string `yaml:"url"`
+	Url    string `yaml:"url"`
 }
 
-
 type SystemConfig struct {
-	Mode string `yaml:"mode"`
-	Receiver       []string    `yaml:"receivers"`
-	Notify NotifyConfig `yaml:"notify"`
-	Rules     []WatchRule  `yaml:"rules"`
+	Mode     string       `yaml:"mode"`
+	Receiver []string     `yaml:"receivers"`
+	Notify   NotifyConfig `yaml:"notify"`
+	Rules    []WatchRule  `yaml:"rules"`
 }
 
 // LoadConfig  加载系统配置

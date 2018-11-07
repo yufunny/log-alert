@@ -1,19 +1,19 @@
 package main
 
 import (
-	"os"
 	log "github.com/sirupsen/logrus"
-	"github.com/yufunny/log-alert/config"
 	"github.com/urfave/cli"
-	"github.com/yufunny/log-alert/watcher"
-	"time"
+	"github.com/yufunny/log-alert/config"
 	"github.com/yufunny/log-alert/notify"
-)
-var (
-	configPath   string
-	configs *config.SystemConfig
+	"github.com/yufunny/log-alert/watcher"
+	"os"
+	"time"
 )
 
+var (
+	configPath string
+	configs    *config.SystemConfig
+)
 
 func main() {
 	log.SetLevel(log.DebugLevel)
@@ -57,23 +57,23 @@ func run(_ *cli.Context) {
 	}
 
 	notifier := &notify.MailNotify{
-		Url:configs.Notify.Url,
-		Receivers:configs.Receiver,
+		Url:       configs.Notify.Url,
+		Receivers: configs.Receiver,
 	}
 	watchers := make([]*watcher.Watcher, 0)
-	for _, rule := range configs.Rules  {
+	for _, rule := range configs.Rules {
 		duration, _ := time.ParseDuration(rule.Duration)
 		interval, _ := time.ParseDuration(rule.Interval)
-		watch :=  &watcher.Watcher{
-			File:rule.File,
-			Rule:rule.Rule,
-			Desc: rule.Desc,
-			Duration:duration,
-			Times:rule.Times,
-			Interval:interval,
+		watch := &watcher.Watcher{
+			File:     rule.File,
+			Rule:     rule.Rule,
+			Desc:     rule.Desc,
+			Duration: duration,
+			Times:    rule.Times,
+			Interval: interval,
 			Notifier: notifier,
-			Count: 0,
-			Sent: false,
+			Count:    0,
+			Sent:     false,
 		}
 		go watch.Watch()
 		watchers = append(watchers, watch)
