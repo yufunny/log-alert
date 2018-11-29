@@ -6,8 +6,14 @@ import (
 	"io/ioutil"
 )
 
-type WatchRule struct {
+type FileConfig struct {
 	File     string `yaml:"file"`
+	Desc     string `yaml:"desc"`
+	Analyser string `yaml:"analyser"`
+	Rules    []RuleConfig `yaml:"rules"`
+}
+
+type RuleConfig struct {
 	Rule     string `yaml:"rule"`
 	Desc     string `yaml:"desc"`
 	Duration string `yaml:"duration"`
@@ -24,7 +30,7 @@ type SystemConfig struct {
 	Mode     string       `yaml:"mode"`
 	Receiver []string     `yaml:"receivers"`
 	Notify   NotifyConfig `yaml:"notify"`
-	Rules    []WatchRule  `yaml:"rules"`
+	Files    []FileConfig `yaml:"files"`
 }
 
 // LoadConfig  加载系统配置

@@ -61,22 +61,10 @@ func run(_ *cli.Context) {
 		Receivers: configs.Receiver,
 	}
 	watchers := make([]*watcher.Watcher, 0)
-	for _, rule := range configs.Rules {
-		duration, _ := time.ParseDuration(rule.Duration)
-		interval, _ := time.ParseDuration(rule.Interval)
-		watch := &watcher.Watcher{
-			File:     rule.File,
-			Rule:     rule.Rule,
-			Desc:     rule.Desc,
-			Duration: duration,
-			Times:    rule.Times,
-			Interval: interval,
-			Notifier: notifier,
-			Count:    0,
-			Sent:     false,
-		}
-		go watch.Watch()
-		watchers = append(watchers, watch)
+	for _, file := range configs.Files {
+		w := watcher.NewWatcher(file, notifier)
+		go w.Watch()
+		watchers = append(watchers, w)
 	}
 
 	for {
