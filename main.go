@@ -61,6 +61,7 @@ func run(_ *cli.Context) {
 		Receivers: configs.Receiver,
 	}
 	watchers := make([]*watcher.Watcher, 0)
+	println(configs.Files)
 	for _, file := range configs.Files {
 		w := watcher.NewWatcher(file, notifier)
 		go w.Watch()

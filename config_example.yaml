@@ -7,7 +7,7 @@ notify:
 files:
 - file: ./test.log
   desc: 测试文件
-  analyser: nginx
+  bound: ^[]
   rules:
   - rule: path/to.*(499|500)
     desc: http请求异常

@@ -1,12 +1,10 @@
 package watcher
 
 import (
-	"fmt"
 	"github.com/papertrail/go-tail/follower"
 	"github.com/sirupsen/logrus"
 	"github.com/yufunny/log-alert/notify"
 	"io"
-	"os"
 	"regexp"
 	"time"
 	"github.com/yufunny/log-alert/config"
@@ -16,29 +14,45 @@ import (
 type Watcher struct {
 	file     string
 	desc     string
-	rules	[]rule
-	analyser string
+	rules	[]*rule
+	boundRegexp *regexp.Regexp
 
 	notifier notify.Notify
 	handler * follower.Follower
 	live uint64
+	piece []string
+
 }
 
 type rule struct {
-	duration time.Duration
+	ruleRegexp *regexp.Regexp
+	desc     string
+	duration uint64
 	times    int
-	interval time.Duration
+	interval uint64
 	count    int
 	sent     bool
 	text     []string
 }
 
 func NewWatcher(fileConfig config.FileConfig, notifier notify.Notify) *Watcher {
+	rules := make([]*rule, 0)
+	for _, rule := range fileConfig.Rules {
+		parsedRule := parseRule(rule)
+		rules = append(rules, parsedRule)
+	}
+	var boundRegexp *regexp.Regexp
+	if fileConfig.Bound != "" {
+		boundRegexp = regexp.MustCompile(fileConfig.Bound)
+	} else {
+		boundRegexp = nil
+	}
 	watcher :=  &Watcher{
 		file: fileConfig.File,
 		desc: fileConfig.Desc,
-		analyser: fileConfig.Analyser,
+		boundRegexp: boundRegexp,
 		notifier: notifier,
+		rules: rules,
 	}
 	return watcher
 }
@@ -52,17 +66,18 @@ func parseFile(raw string) string {
 }
 
 func parseRule(ruleConfig config.RuleConfig) *rule {
-
 	duration, _ := time.ParseDuration(ruleConfig.Duration)
 	interval, _ := time.ParseDuration(ruleConfig.Interval)
-  return &rule{
-  	duration: duration,
-  	interval: interval,
-  	times: ruleConfig.Times,
-  	count: 0,
-  	sent: false,
-  	text: make([]string, 0),
-  }
+	  return &rule{
+		ruleRegexp: regexp.MustCompile(ruleConfig.Rule),
+		desc: ruleConfig.Desc,
+		duration: uint64(duration.Seconds()),
+		interval: uint64(interval.Seconds()),
+		times: ruleConfig.Times,
+		count: 0,
+		sent: false,
+		text: make([]string, 0),
+	  }
 }
 
 func (w *Watcher) Watch() {
@@ -74,25 +89,43 @@ func (w *Watcher) Watch() {
 	})
 
 	go w.tick()
-	//reg := regexp.MustCompile(w.Rule)
-	//
-	//for line := range w.handler.Lines() {
-	//	if reg.Match(line.Bytes()) {
-	//		logrus.Debugf("%s:%s", w.desc, string(line.Bytes()))
-	//		w.Text = append(w.Text, string(line.Bytes()))
-	//		if len(w.Text) >= w.Times && !w.Sent {
-	//			w.Notifier.Send(w.Desc, w.Text...)
-	//			if w.Interval.Nanoseconds() > 0 {
-	//				w.Sent = true
-	//			}
-	//			w.Text = make([]string, 0)
-	//		}
-	//	}
-	//}
-	//
-	//if t.Err() != nil {
-	//	fmt.Fprintln(os.Stderr, t.Err())
-	//}
+	for line := range w.handler.Lines() {
+		logrus.Debugf("%s:%s", w.desc, string(line.Bytes()))
+		piece := w.parsePiece(line.String())
+		if len(piece) == 0 {
+			continue
+		}
+
+		for _, rule := range w.rules {
+			if rule.ruleRegexp.Match(line.Bytes()) {
+				rule.text = append(rule.text, string(line.Bytes()))
+				if len(rule.text) >= rule.times && !rule.sent {
+					w.notifier.Send(rule.desc, rule.text...)
+					if rule.interval > 0 {
+						rule.sent = true
+					}
+					rule.text = make([]string, 0)
+				}
+			}
+		}
+
+	}
+}
+
+func (w *Watcher) parsePiece(line string) []string {
+	if w.boundRegexp == nil {
+		return []string{line}
+	}
+	if ! w.boundRegexp.Match([]byte(line)) {
+		if len(w.piece) != 0 {
+			w.piece = append(w.piece, line)
+		}
+		return []string{}
+	} else {
+		ret := w.piece
+		w.piece = []string{line}
+		return ret
+	}
 }
 
 func (w *Watcher) tick() {
@@ -105,7 +138,14 @@ func (w *Watcher) tick() {
 				if w.live == ^uint64(0) {
 					w.live = 0
 				}
-				//for w.Rules
+				for _, rule := range w.rules {
+					if rule.interval> 0 && w.live % rule.interval == 0 {
+						rule.sent = false
+					}
+					if rule.duration> 0 && w.live % rule.duration == 0 {
+						rule.count = 0
+					}
+				}
 			}
 		}
 	}()

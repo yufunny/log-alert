@@ -9,7 +9,7 @@ import (
 type FileConfig struct {
 	File     string `yaml:"file"`
 	Desc     string `yaml:"desc"`
-	Analyser string `yaml:"analyser"`
+	Bound 	 string `yaml:"bound"`
 	Rules    []RuleConfig `yaml:"rules"`
 }
 
