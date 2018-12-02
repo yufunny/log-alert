@@ -2,13 +2,16 @@ package watcher
 
 import (
 	"github.com/papertrail/go-tail/follower"
-	"github.com/sirupsen/logrus"
 	"github.com/yufunny/log-alert/notify"
 	"io"
 	"regexp"
 	"time"
 	"github.com/yufunny/log-alert/config"
 	"strings"
+	"strconv"
+	"fmt"
+	"os"
+	"github.com/sirupsen/logrus"
 )
 
 type Watcher struct {
@@ -21,7 +24,7 @@ type Watcher struct {
 	handler * follower.Follower
 	live uint64
 	piece []string
-
+	clock *time.Ticker
 }
 
 type rule struct {
@@ -54,13 +57,21 @@ func NewWatcher(fileConfig config.FileConfig, notifier notify.Notify) *Watcher {
 		notifier: notifier,
 		rules: rules,
 	}
+	go watcher.tick()
 	return watcher
 }
 
 func parseFile(raw string) string {
 	if strings.Index(raw, "%Y") > -1 {
-		logrus.Debugf("time format %d", time.Now().Year())
-		//strings.Replace(raw, "%Y", time.Now().Year())
+		raw = strings.Replace(raw, "%Y", strconv.Itoa(time.Now().Year()), 1)
+	}
+	if strings.Index(raw, "%m") > -1 {
+		month := fmt.Sprintf("%02d", time.Now().Month())
+		raw = strings.Replace(raw, "%m", month, 1)
+	}
+	if strings.Index(raw, "%d") > -1 {
+		day := fmt.Sprintf("%02d", time.Now().Day())
+		raw = strings.Replace(raw, "%d", day, 1)
 	}
 	return raw
 }
@@ -81,25 +92,37 @@ func parseRule(ruleConfig config.RuleConfig) *rule {
 }
 
 func (w *Watcher) Watch() {
+	if w.handler != nil {
+		w.handler.Close()
+	}
 	parsedFile := parseFile(w.file)
+	for {
+		_, err := os.Stat(parsedFile)
+		if err == nil {
+			break
+		}
+		logrus.Infof("文件:%s 不存在", parsedFile)
+		time.Sleep(time.Minute)
+	}
 	w.handler, _ = follower.New(parsedFile, follower.Config{
 		Whence: io.SeekEnd,
 		Offset: 0,
 		Reopen: true,
 	})
 
-	go w.tick()
+	logrus.Debugf("start listening: %s", parsedFile)
+
 	for line := range w.handler.Lines() {
-		logrus.Debugf("%s:%s", w.desc, string(line.Bytes()))
 		piece := w.parsePiece(line.String())
 		if len(piece) == 0 {
 			continue
 		}
 
 		for _, rule := range w.rules {
-			if rule.ruleRegexp.Match(line.Bytes()) {
-				rule.text = append(rule.text, string(line.Bytes()))
-				if len(rule.text) >= rule.times && !rule.sent {
+			if rule.ruleRegexp.Match([]byte(piece[0])) {
+				rule.text = append(rule.text, piece...)
+				rule.count++
+				if rule.count >= rule.times && !rule.sent {
 					w.notifier.Send(rule.desc, rule.text...)
 					if rule.interval > 0 {
 						rule.sent = true
@@ -129,21 +152,24 @@ func (w *Watcher) parsePiece(line string) []string {
 }
 
 func (w *Watcher) tick() {
-	clock := time.NewTicker(time.Second)
+	w.clock = time.NewTicker(time.Second)
 	go func() {
 		for {
 			select {
-			case <-clock.C:
+			case <-w.clock.C:
 				w.live++
 				if w.live == ^uint64(0) {
 					w.live = 0
 				}
 				for _, rule := range w.rules {
 					if rule.interval> 0 && w.live % rule.interval == 0 {
+						println("internal clear")
 						rule.sent = false
 					}
 					if rule.duration> 0 && w.live % rule.duration == 0 {
+						println("duration clear")
 						rule.count = 0
+						rule.text = make([]string, 0)
 					}
 				}
 			}

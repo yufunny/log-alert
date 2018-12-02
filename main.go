@@ -1,13 +1,13 @@
 package main
 
 import (
+	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/yufunny/log-alert/config"
 	"github.com/yufunny/log-alert/notify"
 	"github.com/yufunny/log-alert/watcher"
 	"os"
-	"time"
 )
 
 var (
@@ -68,7 +68,14 @@ func run(_ *cli.Context) {
 		watchers = append(watchers, w)
 	}
 
-	for {
-		time.Sleep(time.Second)
-	}
+	c := cron.New()
+	spec := "0 42 21 * * ?"
+	c.AddFunc(spec, func() {
+		for _, w := range watchers {
+			go w.Watch()
+		}
+	})
+	c.Start()
+
+	select {}
 }
