@@ -56,12 +56,8 @@ func run(_ *cli.Context) {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	notifier := &notify.MailNotify{
-		Url:       configs.Notify.Url,
-		Receivers: configs.Receiver,
-	}
+	notifier, err := notify.Open(configs.Notify.Driver, configs.Notify.Url, configs.Receiver)
 	watchers := make([]*watcher.Watcher, 0)
-	println(configs.Files)
 	for _, file := range configs.Files {
 		w := watcher.NewWatcher(file, notifier)
 		go w.Watch()
@@ -69,7 +65,7 @@ func run(_ *cli.Context) {
 	}
 
 	c := cron.New()
-	spec := "0 42 21 * * ?"
+	spec := "0 0 0 * * ?"
 	c.AddFunc(spec, func() {
 		for _, w := range watchers {
 			go w.Watch()

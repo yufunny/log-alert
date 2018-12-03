@@ -11,7 +11,14 @@ type MailNotify struct {
 	Receivers []string
 }
 
-func (x *MailNotify) Send(desc string, content ...string) {
+func getMailNotify (url string, receivers []string) (Notify, error)   {
+	return &MailNotify{
+		Url:url,
+		Receivers:receivers,
+	}, nil
+}
+
+func (x *MailNotify) Send(receivers []string,desc string, content ...string) {
 	var address, password, smtp string
 	var port int
 	fmt.Sscanf(x.Url, "%s | %s | %s | %d", &address, &password, &smtp, &port)
@@ -20,7 +27,12 @@ func (x *MailNotify) Send(desc string, content ...string) {
 	// 发件人
 	m.SetAddressHeader("From", address, "notice")
 	// 收件人
-	m.SetHeader("To", x.Receivers...)
+
+	if len(receivers) == 0 {
+		receivers = x.Receivers
+	}
+
+	m.SetHeader("To", receivers...)
 	// 主题
 	m.SetHeader("Subject", fmt.Sprintf("[%s]日志监控警报", desc))
 	body := "日志内容:"

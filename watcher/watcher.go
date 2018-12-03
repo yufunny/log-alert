@@ -36,6 +36,7 @@ type rule struct {
 	count    int
 	sent     bool
 	text     []string
+	receivers []string
 }
 
 func NewWatcher(fileConfig config.FileConfig, notifier notify.Notify) *Watcher {
@@ -88,6 +89,7 @@ func parseRule(ruleConfig config.RuleConfig) *rule {
 		count: 0,
 		sent: false,
 		text: make([]string, 0),
+		receivers: ruleConfig.Receiver,
 	  }
 }
 
@@ -110,7 +112,7 @@ func (w *Watcher) Watch() {
 		Reopen: true,
 	})
 
-	logrus.Debugf("start listening: %s", parsedFile)
+	logrus.Infof("start listening: %s", parsedFile)
 
 	for line := range w.handler.Lines() {
 		piece := w.parsePiece(line.String())
@@ -120,14 +122,17 @@ func (w *Watcher) Watch() {
 
 		for _, rule := range w.rules {
 			if rule.ruleRegexp.Match([]byte(piece[0])) {
-				rule.text = append(rule.text, piece...)
-				rule.count++
-				if rule.count >= rule.times && !rule.sent {
-					w.notifier.Send(rule.desc, rule.text...)
-					if rule.interval > 0 {
-						rule.sent = true
+				if !rule.sent {
+					rule.text = append(rule.text, piece...)
+					rule.count++
+					if rule.count >= rule.times {
+						w.notifier.Send(rule.receivers, "[" + w.desc +"]" + rule.desc, rule.text...)
+						if rule.interval > 0 {
+							rule.sent = true
+						}
+						rule.text = make([]string, 0)
+						rule.count = 0
 					}
-					rule.text = make([]string, 0)
 				}
 			}
 		}
@@ -163,11 +168,11 @@ func (w *Watcher) tick() {
 				}
 				for _, rule := range w.rules {
 					if rule.interval> 0 && w.live % rule.interval == 0 {
-						println("internal clear")
+						logrus.Debugf("internal clear")
 						rule.sent = false
 					}
 					if rule.duration> 0 && w.live % rule.duration == 0 {
-						println("duration clear")
+						logrus.Debugf("duration clear")
 						rule.count = 0
 						rule.text = make([]string, 0)
 					}

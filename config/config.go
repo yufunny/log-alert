@@ -19,6 +19,7 @@ type RuleConfig struct {
 	Duration string `yaml:"duration"`
 	Times    int    `yaml:"times"`
 	Interval string `yaml:"interval"`
+	Receiver []string     `yaml:"receivers"`
 }
 
 type NotifyConfig struct {
