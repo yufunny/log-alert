@@ -1,13 +1,13 @@
 package main
 
 import (
+	"github.com/robfig/cron"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 	"github.com/yufunny/log-alert/config"
 	"github.com/yufunny/log-alert/notify"
 	"github.com/yufunny/log-alert/watcher"
 	"os"
-	"time"
 )
 
 var (
@@ -56,30 +56,22 @@ func run(_ *cli.Context) {
 		log.SetLevel(log.InfoLevel)
 	}
 
-	notifier := &notify.MailNotify{
-		Url:       configs.Notify.Url,
-		Receivers: configs.Receiver,
-	}
+	notifier, err := notify.Open(configs.Notify.Driver, configs.Notify.Url, configs.Receiver)
 	watchers := make([]*watcher.Watcher, 0)
-	for _, rule := range configs.Rules {
-		duration, _ := time.ParseDuration(rule.Duration)
-		interval, _ := time.ParseDuration(rule.Interval)
-		watch := &watcher.Watcher{
-			File:     rule.File,
-			Rule:     rule.Rule,
-			Desc:     rule.Desc,
-			Duration: duration,
-			Times:    rule.Times,
-			Interval: interval,
-			Notifier: notifier,
-			Count:    0,
-			Sent:     false,
-		}
-		go watch.Watch()
-		watchers = append(watchers, watch)
+	for _, file := range configs.Files {
+		w := watcher.NewWatcher(file, notifier)
+		go w.Watch()
+		watchers = append(watchers, w)
 	}
 
-	for {
-		time.Sleep(time.Second)
-	}
+	c := cron.New()
+	spec := "0 0 0 * * ?"
+	c.AddFunc(spec, func() {
+		for _, w := range watchers {
+			go w.Watch()
+		}
+	})
+	c.Start()
+
+	select {}
 }

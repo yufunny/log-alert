@@ -4,10 +4,18 @@ receivers:
 notify:
   driver: mail
   url:  user | password | smtp.mxhichina.com | 25
-rules:
-- file: ./test.log
-  rule: path/to.*(499|500)
-  desc: http请求异常
-  interval: 60s
-  duration: 60s
-  times: 5
+files:
+- file: ./test-%Y-%m-%d.log
+  desc: 测试文件
+  bound: '\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\]'
+  rules:
+  - rule: path/to.*(499|500)
+    desc: http请求异常
+    interval: 60s
+    duration: 60s
+    times: 5
+  - rule: path/to.*200
+    desc: http请求异常
+    interval: 60s
+    duration: 60s
+    times: 5
