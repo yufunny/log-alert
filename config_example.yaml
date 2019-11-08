@@ -1,4 +1,4 @@
-mode: debug
+mode: release
 receivers:
 - receiver@yufu.fun
 notify:
