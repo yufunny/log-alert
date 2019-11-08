@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/gomail.v2"
+	"strconv"
+	"strings"
 )
 
 type MailNotify struct {
@@ -19,9 +21,19 @@ func getMailNotify (url string, receivers []string) (Notify, error)   {
 }
 
 func (x *MailNotify) Send(receivers []string,desc string, content ...string) {
-	var address, password, smtp string
-	var port int
-	fmt.Sscanf(x.Url, "%s | %s | %s | %d", &address, &password, &smtp, &port)
+	p := strings.Split(x.Url, "|")
+	if len(p) != 4 {
+		logrus.Errorf("mail config error")
+		return
+	}
+	address := p[0]
+	password := p[1]
+	smtp := p[2]
+	port, err:= strconv.Atoi(p[3])
+	if err != nil {
+		logrus.Errorf("mail port config error:%s", err.Error())
+		return
+	}
 
 	m := gomail.NewMessage()
 	// 发件人
@@ -44,6 +56,7 @@ func (x *MailNotify) Send(receivers []string,desc string, content ...string) {
 	d := gomail.NewDialer(smtp, port, address, password)
 	if err := d.DialAndSend(m); err != nil {
 		logrus.Errorf("[mail notify]error:%s", err.Error())
+	} else {
+		logrus.Info("mail send success...")
 	}
-	fmt.Println("mail send success...")
 }

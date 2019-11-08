@@ -3,7 +3,7 @@ receivers:
 - receiver@yufu.fun
 notify:
   driver: mail
-  url:  user | password | smtp.mxhichina.com | 25
+  url:  user|password|smtp.mxhichina.com|25
 files:
 - file: ./test-%Y-%m-%d.log
   desc: 测试文件
